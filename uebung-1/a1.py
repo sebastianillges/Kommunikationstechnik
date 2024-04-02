@@ -35,7 +35,7 @@ def a1_2():
         for word in seven_letter_words:
             if word[i] == letter:
                 findings += 1
-        plt.bar(f"{i}, {letter}", log2(len(seven_letter_words) / findings))
+        plt.bar(f"{i}, {letter}\n{log2(len(seven_letter_words) / findings).__round__(2)}", log2(len(seven_letter_words) / findings))
     plt.title("Aufgabe 1.2")
     plt.show()
 
@@ -49,7 +49,7 @@ def a1_3():
                 findings += 1
         print(
             f"Anzahl Woerter der Laenge 7, die mit {xylofon[0:i + 1]} beginnen: {findings}, Informationsgehalt = {log2(last / findings)}")
-        plt.bar(f"{i}, {letter}", log2(last / findings))
+        plt.bar(f"{i}, {letter}\n{log2(last / findings).__round__(2)}", log2(last / findings))
         last = findings
     plt.title("Aufgabe 1.3 Vorwaerts")
     plt.show()
@@ -62,13 +62,13 @@ def a1_3():
                 findings += 1
         print(
             f"Anzahl Woerter der Laenge 7, die mit {xylofon[len(xylofon) - i - 1:]} enden: {findings}, Informationsgehalt = {log2(last / findings)}")
-        plt.bar(f"{i}, {letter}", log2(last / findings))
+        plt.bar(f"{i}, {letter}\n{log2(last / findings).__round__(2)}", log2(last / findings))
         last = findings
     plt.title("Aufgabe 1.3 Rueckwaerts")
     plt.show()
 
 
 if __name__ == '__main__':
-    # a1_1()
-    # a1_2()
+    a1_1()
+    a1_2()
     a1_3()
