@@ -1,29 +1,45 @@
 # shannon.py
 
-def shannon(data):
-    total_occurence = 0
-    for elem in data:
-        total_occurence += elem[0]
+from collections import Counter
 
-    count = 0
-    for i, elem in enumerate(data):
-        count += elem[0]
-        if count == total_occurence // 2:
-            count += elem[0]
-            break
-        if count >= total_occurence // 2:
-            print(f'elem: {elem}, idx: {i}, count: {count}')
+
+def assign_codes(symbols: dict[str, int], code: str) -> dict[str, int]:
+    # return symbol with corresponding code
+    if len(symbols) == 1:
+        return {k: code for k in symbols}
+
+    # divide symbols
+    total_freq = sum(symbols.values())
+    half_freq = 0
+    for i, (symbol, freq) in enumerate(symbols.items()):
+        half_freq += freq
+
+        if half_freq >= total_freq / 2:
+            left_symbols = {k: v for j, (k, v) in enumerate(symbols.items()) if j <= i}
+            right_symbols = {k: v for j, (k, v) in enumerate(symbols.items()) if j > i}
             break
 
-    return
+    # append codes
+    left_code = assign_codes(left_symbols, f'{code}0')
+    right_code = assign_codes(right_symbols, f'{code}1')
+
+    return {**left_code, **right_code}
+
+
+def shannon_fano(data: str) -> dict[str, int]:
+    if not data:
+        return {}
+
+    freq = dict(Counter(data).most_common())
+    print(f'frequencies: {freq}')
+    return assign_codes(freq, '')
 
 
 def main():
-    word = "HOCHSCHULE"
-    data = list(set([(word.count(letter), letter, "") for letter in word]))
-    sorted_data = sorted(data, key=lambda x: x[0], reverse=True)
-    print(f'sorted data: {sorted_data}')
-    result = shannon(data)
+    data = 'HOCHSCHULE'
+    codes = shannon_fano(data)
+    print(f'codes: {codes}')
+    return
 
 
 if __name__ == '__main__':
