@@ -1,15 +1,13 @@
 import math
 import matplotlib.pyplot as plt
-from sortedcontainers import SortedDict
 
 
 class Nachrichtenquelle:
     def __init__(self, wort):
-        self.wort = wort.lower()
-        self.auftrittswahrscheinlichkeiten = SortedDict(self.berechne_auftrittswahrscheinlichkeiten())
-        self.informationsgehalt = SortedDict(self.berechne_informationsgehalt())
+        self.wort = wort
+        self.auftrittswahrscheinlichkeiten = dict(sorted(self.berechne_auftrittswahrscheinlichkeiten().items(), key=lambda x: x[1], reverse=True))
+        self.informationsgehalt = self.berechne_informationsgehalt()
         self.entropie = self.berechne_entropie()
-        self.plot()
 
     def berechne_auftrittswahrscheinlichkeiten(self):
         wahrscheinlichkeiten = {}
@@ -20,21 +18,18 @@ class Nachrichtenquelle:
                 wahrscheinlichkeiten[zeichen] = 1
         for zeichen in wahrscheinlichkeiten:
             wahrscheinlichkeiten[zeichen] = round(wahrscheinlichkeiten[zeichen] / len(self.wort), 3)
-        print(f"Wahrscheinlichkeiten: {wahrscheinlichkeiten}")
         return wahrscheinlichkeiten
 
     def berechne_informationsgehalt(self):
         informationsgehalt = {}
         for zeichen, wahrscheinlichkeit in self.auftrittswahrscheinlichkeiten.items():
             informationsgehalt[zeichen] = round(-math.log2(wahrscheinlichkeit), 3)
-        print(f"Informationsgehalt: {informationsgehalt}")
         return informationsgehalt
 
     def berechne_entropie(self):
         entropie = 0
         for wahrscheinlichkeit in self.auftrittswahrscheinlichkeiten.values():
             entropie = round(entropie + wahrscheinlichkeit * -math.log2(wahrscheinlichkeit), 3)
-        print(f"Entropie: {entropie}")
         return entropie
 
     def plot(self):
@@ -47,6 +42,11 @@ class Nachrichtenquelle:
 
 
 if __name__ == '__main__':
-    # Nachrichtenquelle("Hochschule")
-    Nachrichtenquelle(
+    # nachrichtenquelle = Nachrichtenquelle("Hochschule")
+    nachrichtenquelle = Nachrichtenquelle(
         "This document describes HTCPCP, a protocol for controlling, monitoring, and diagnosing coffee pots")
+
+    print(f'Wahrscheinlichkeiten: {nachrichtenquelle.auftrittswahrscheinlichkeiten}')
+    print(f'Informationsgehalt: {nachrichtenquelle.informationsgehalt}')
+    print(f'Entropie: {nachrichtenquelle.entropie}')
+    # nachrichtenquelle.plot()

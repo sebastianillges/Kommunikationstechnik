@@ -2,15 +2,17 @@
 
 from collections import Counter
 
+from source import Nachrichtenquelle
 
-def assign_codes(symbols: dict[str, int], code: str) -> dict[str, int]:
+
+def assign_codes(symbols: dict[str, float], code: str) -> dict[str, str]:
     # return symbol with corresponding code
     if len(symbols) == 1:
         return {k: code for k in symbols}
 
     # divide symbols
     total_freq = sum(symbols.values())
-    half_freq = 0
+    half_freq = 0.0
     for i, (symbol, freq) in enumerate(symbols.items()):
         half_freq += freq
 
@@ -26,17 +28,15 @@ def assign_codes(symbols: dict[str, int], code: str) -> dict[str, int]:
     return {**left_code, **right_code}
 
 
-def shannon_fano(data: str) -> dict[str, int]:
+def shannon_fano(data: Nachrichtenquelle) -> dict[str, str]:
     if not data:
         return {}
 
-    freq = dict(Counter(data).most_common())
-    print(f'frequencies: {freq}')
-    return assign_codes(freq, '')
+    return assign_codes(data.auftrittswahrscheinlichkeiten, '')
 
 
 def main():
-    data = 'HOCHSCHULE'
+    data = Nachrichtenquelle('hochschule')
     codes = shannon_fano(data)
     print(f'codes: {codes}')
     return
