@@ -11,25 +11,25 @@ class Nachrichtenquelle:
 
     def berechne_auftrittswahrscheinlichkeiten(self):
         wahrscheinlichkeiten = {}
-        for zeichen in self.wort:
+        for zeichen in self.wort.lower():
             if zeichen in wahrscheinlichkeiten:
                 wahrscheinlichkeiten[zeichen] += 1
             else:
                 wahrscheinlichkeiten[zeichen] = 1
         for zeichen in wahrscheinlichkeiten:
-            wahrscheinlichkeiten[zeichen] = round(wahrscheinlichkeiten[zeichen] / len(self.wort), 3)
+            wahrscheinlichkeiten[zeichen] = wahrscheinlichkeiten[zeichen] / len(self.wort)
         return wahrscheinlichkeiten
 
     def berechne_informationsgehalt(self):
         informationsgehalt = {}
         for zeichen, wahrscheinlichkeit in self.auftrittswahrscheinlichkeiten.items():
-            informationsgehalt[zeichen] = round(-math.log2(wahrscheinlichkeit), 3)
+            informationsgehalt[zeichen] = -math.log2(wahrscheinlichkeit)
         return informationsgehalt
 
     def berechne_entropie(self):
         entropie = 0
         for wahrscheinlichkeit in self.auftrittswahrscheinlichkeiten.values():
-            entropie = round(entropie + wahrscheinlichkeit * -math.log2(wahrscheinlichkeit), 3)
+            entropie = entropie + wahrscheinlichkeit * -math.log2(wahrscheinlichkeit)
         return entropie
 
     def plot(self):
