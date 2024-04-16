@@ -3,17 +3,19 @@
 class LempelZivWelch:
     @staticmethod
     def encode(message, char_list):
-        # dictionary = {char: i for i, char in enumerate(char_list)}
-        bitstring = b''
+        bitstring = []
         pattern = ''
 
         for char in message:
             if pattern + char in char_list:
                 pattern = pattern + char
             else:
-                
+                char_list.append(pattern + char)
+                bitstring.append(char_list.index(pattern))
+                pattern = char
 
-            char_list.append(char)
+        if pattern:
+            bitstring.append(char_list.index(pattern))
 
         return bitstring
 
@@ -34,7 +36,7 @@ def main():
     new_message = LempelZivWelch.decode(bitstring, char_list.copy())
 
     print(f'original message : "{message}"')
-    print(f'encoded bitstring: {bitstring}')
+    print(f'encoded bitstring: "{bitstring}"')
     print(f'decoded bitstring: "{new_message}"')
 
 
