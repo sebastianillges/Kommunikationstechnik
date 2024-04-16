@@ -16,15 +16,22 @@ class LempelZivWelch:
 
         if pattern:
             bitstring.append(char_list.index(pattern))
-
         return bitstring
 
 
     @staticmethod
     def decode(bitstring, char_list):
-        dictionary = {char: i for i, char in enumerate(char_list)}
+        dictionary = {i: char for i, char in enumerate(char_list)}
         message = ''
-
+        last = bitstring[0]
+        message += dictionary[last]
+        for char in bitstring[1:]:
+            if char in dictionary.keys():
+                dictionary[len(dictionary)] = dictionary[last] + dictionary[char][:1]
+            else:
+                dictionary[len(dictionary)] = dictionary[last] + dictionary[last][:1]
+            message += dictionary[char]
+            last = char
         return message
 
 
