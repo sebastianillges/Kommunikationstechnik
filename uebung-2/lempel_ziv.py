@@ -70,25 +70,6 @@ def find_optimal_combination(message):
     print("Optimal ref_bits:", optimal_ref_bits)
     print("Optimal len_bits:", optimal_len_bits)
 
-def find_optimal_combination_speedup(message):
-    min_size = float('inf')
-    optimal_ref_bits = 0
-    optimal_len_bits = 0
-
-    for ref_bits in range(1, len(message)):
-        for len_bits in range(1, len(message)):
-            lz = LempelZiv(ref_bits=ref_bits, len_bits=len_bits)
-            encoded_message, _ = lz.encode(message)
-            compressed_size = len(encoded_message)
-            if compressed_size < min_size:
-                min_size = compressed_size
-                optimal_ref_bits = ref_bits
-                optimal_len_bits = len_bits
-
-
-    print("Optimal ref_bits:", optimal_ref_bits)
-    print("Optimal len_bits:", optimal_len_bits)
-
 
 def test(message):
     lz = LempelZiv(ref_bits=3, len_bits=2)
@@ -104,11 +85,11 @@ def test(message):
 
 
 def main():
-    # message = "FISCHERSFRITZFISCHTFRISCHEFISCHE"
-    message = open("rfc2324.txt", "r").read()
-    # test(message)
+    message = "FISCHERSFRITZFISCHTFRISCHEFISCHE"
+    # message = open("rfc2324.txt", "r").read()
 
-    find_optimal_combination_speedup(message)
+    test(message)
+    find_optimal_combination(message)
 
 
 if __name__ == '__main__':
