@@ -11,8 +11,17 @@ class BlockCodes:
         self.max_corr_bits = max_corr_bits
         self.generator_matrix = np.concatenate((part_matrix, np.identity(self.use_bits)), axis=1).astype(int)
         self.part_matrix = part_matrix
-        self.parity_matrix = np.concatenate((np.identity(self.check_bits), np.transpose(self.part_matrix)), axis=1).astype(int)
-        self.syndrome_table = np.transpose(self.parity_matrix)
+        self.parity_matrix = np.concatenate((np.identity(self.check_bits), np.transpose(self.part_matrix)),
+                                            axis=1).astype(int)
+        self.parity_matrix_transposed = np.transpose(self.parity_matrix)
+        self.syndrome_table = self.build_syndrome_table()
+
+    def build_syndrome_table(self):
+        syndrome_table = [[0] * len(self.parity_matrix_transposed) for _ in range(len(self.parity_matrix_transposed) + 1)]
+        for i, column in enumerate(self.parity_matrix_transposed):
+            index = int(''.join([f'{b}' for b in column]), 2)
+            syndrome_table[index][i] = 1
+        return syndrome_table
 
     def encode(self, message):
         check_type_np_int_array(message)
@@ -20,8 +29,8 @@ class BlockCodes:
 
     def decode(self, codeword):
         check_type_np_int_array(codeword)
-        error_syndrome = codeword @ self.syndrome_table % 2
-        corrected_errors = [1 if np.all(n == error_syndrome) else 0 for n in self.syndrome_table]
+        error_syndrome = int(''.join([f'{b}' for b in (codeword @ self.parity_matrix_transposed % 2)]), 2)
+        corrected_errors = self.syndrome_table[error_syndrome]
         message = (codeword ^ corrected_errors)[self.check_bits:]
         return message, sum(corrected_errors)
 
@@ -34,7 +43,8 @@ class BlockCodes:
             Generator matrix:\n{self.generator_matrix}
             Part matrix:\n{self.part_matrix}
             Parity matrix:\n{self.parity_matrix}
-            Syndrome table:\n{self.syndrome_table}"""
+            Parity matrix:\n{self.parity_matrix_transposed}
+            Syndrome Table:\n{self.syndrome_table}"""
 
 
 def check_type_np_int_array(arr):
@@ -42,15 +52,23 @@ def check_type_np_int_array(arr):
         raise (ValueError('Argument be a numpy array of ints'))
 
 
+def flip_n_bits(arr, n):
+    indices = np.random.choice(len(arr), n, replace=False)
+    arr[indices] = 1 - arr[indices]
+    return arr
+
+
 def test(part_matrix, max_corr_bits):
     bcodes = BlockCodes(part_matrix, max_corr_bits)
-    # print(bcodes, end='\n\n')
+    print(bcodes, end='\n\n')
 
     message = np.array([0, 1, 1, 0])
     print(f'message: {message}')
     codeword = bcodes.encode(message)
-    codeword = np.array([1, 1, 0, 0, 1, 1, 0])
-    print(f'sent codeword: {codeword}')
+    print(f"encoded codeword: {codeword}")
+
+    faulty_codeword = flip_n_bits(codeword, max_corr_bits)
+    print(f"faulty codeword: {faulty_codeword}")
 
     new_message, corrected_errors = bcodes.decode(codeword)
     print(f'received messsage: {new_message}')
