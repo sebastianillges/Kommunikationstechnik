@@ -3,6 +3,8 @@
 import numpy as np
 from itertools import permutations
 
+from channel import FBC
+
 
 class BlockCodes:
     def __init__(self, part_matrix, max_corr_bits):
@@ -73,12 +75,6 @@ def check_type_np_int_array(arr):
         raise (ValueError('Argument be a numpy array of ints'))
 
 
-def flip_n_bits(arr, n):
-    indices = np.random.choice(len(arr), n, replace=False)
-    arr[indices] = 1 - arr[indices]
-    return arr
-
-
 def test(message, part_matrix, max_corr_bits):
     bcodes = BlockCodes(part_matrix, max_corr_bits)
     # print(bcodes, end='\n\n')
@@ -89,7 +85,8 @@ def test(message, part_matrix, max_corr_bits):
     codeword = bcodes.encode(message)
     print(f" encoded codeword: {codeword}")
 
-    faulty_codeword = flip_n_bits(codeword, 2)
+    fbc = FBC(max_corr_bits)
+    faulty_codeword = fbc(codeword)
     print(f"  faulty codeword: {faulty_codeword}")
 
     if recv := bcodes.decode(faulty_codeword):
