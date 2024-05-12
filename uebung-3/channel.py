@@ -10,7 +10,7 @@ class BSC:
 
     def __call__(self, codeword):
         mask = np.array([1 if self.probability > np.random.rand() else 0 for bit in codeword])
-        return codeword ^ mask
+        return codeword ^ mask, sum([1 for c, f in zip(codeword, codeword ^ mask) if c != f])
 
 
 # fixed bit error channel
@@ -19,9 +19,10 @@ class FBC:
         self.num_bits = num_bits
 
     def __call__(self, codeword):
+        codeword_before = codeword.copy()
         indices = np.random.choice(len(codeword), self.num_bits, replace=False)
         codeword[indices] = 1 - codeword[indices]
-        return codeword
+        return codeword, sum([1 for c, f in zip(codeword_before, codeword) if c != f])
 
 
 if __name__ == '__main__':
