@@ -46,7 +46,8 @@ class Receiver:
 
     def __call__(self, recv_message):
         corrected_message = self.block_code.decode(recv_message)
-        print(f"Corrected Message: {corrected_message[0]}")
+        if corrected_message:
+            print(f"Corrected Message: {corrected_message[0]}")
         return corrected_message
 
 
@@ -126,17 +127,19 @@ class Simulation:
             faulty_message = self.channel(encoded_message)
             num_wrong_bits_before = diff(random_message, faulty_message)
             error_correction = False
-            corrected_message, num_corrections = self.receiver(faulty_message)
-            if num_corrections > 0:
-                error_correction = True
-            num_not_corrected = diff(random_message, corrected_message)
-            results.append((random_message, encoded_message, faulty_message, corrected_message, num_wrong_bits_before,
-                            error_correction, num_corrections, num_not_corrected))
-            if diff(random_message, corrected_message) == 0:
-                print("Corrected")
-            else:
-                print("Not Corrected")
-            print()
+            corrected = self.receiver(faulty_message)
+            if corrected:
+                corrected_message, num_corrections = corrected
+                if num_corrections > 0:
+                    error_correction = True
+                num_not_corrected = diff(random_message, corrected_message)
+                results.append((random_message, encoded_message, faulty_message, corrected_message, num_wrong_bits_before,
+                                error_correction, num_corrections, num_not_corrected))
+                if diff(random_message, corrected_message) == 0:
+                    print("Corrected")
+                else:
+                    print("Not Corrected")
+                print()
         return results
 
 
@@ -146,6 +149,15 @@ if __name__ == '__main__':
     sim = Simulation(Source(4),
                      Sender(block_code),
                      Channel(BSC(0.05)),
+                     Receiver(block_code))
+    results = sim(1000)
+    eval(results)
+
+    # Scenario 2
+    block_code = BlockCodes([[1, 1, 1, 1, 0, 0, 0], [0, 0, 1, 1, 1, 1, 0], [1, 0, 1, 0, 1, 0, 1]], 2)
+    sim = Simulation(Source(3),
+                     Sender(block_code),
+                     Channel(BSC(0.15)),
                      Receiver(block_code))
     results = sim(1000)
     eval(results)
