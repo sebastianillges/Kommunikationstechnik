@@ -47,12 +47,53 @@ class Receiver:
 
     def __call__(self, recv_message):
         corrected_message = self.block_code.decode(recv_message)
-        print(f"Corrected Message: {corrected_message[0]}\n")
+        print(f"Corrected Message: {corrected_message[0]}")
         return corrected_message
 
 
 def diff(correct, faulty):
     return sum([1 for c, f in zip(correct, faulty) if c != f])
+
+
+def eval(results):
+    num_messages = len(results)
+    num_correct_transmissions = 0
+    num_corrections = 0
+    num_uncorrected = 0
+    num_correct_corrections = 0
+    num_wrong_corrections = 0
+    num_bits_before_corrections = 0
+    num_corrected_bits = 0
+    num_uncorrected_bits = 0
+    for result in results:
+        # 1. number of correct transmissions
+        if diff(result[0], result[2]) == 0:
+            num_correct_transmissions += 1
+        # 2. number of corrected messages
+        if result[5]:
+            num_corrections += 1
+        # 3. number of correct corrections
+        if result[5] and diff(result[0], result[3]) == 0:
+            num_correct_corrections += 1
+        # 4. number of wrong corrections
+        elif result[5] and diff(result[0], result[3]) != 0:
+            num_wrong_corrections += 1
+        # 6. number of bit errors before correction
+        num_bits_before_corrections += result[4]
+        # 7. number of uncorrected bits
+        num_corrected_bits += result[6]
+        # 8. number of uncorrected bits
+        num_uncorrected_bits += result[7]
+
+    print(f"Number of correct Transmissions: {num_correct_transmissions}/{num_messages}")
+    print(f"Number of corrected Messages: {num_corrections}/{num_messages}")
+    print(f"Number of uncorrected Messages: {num_uncorrected}/{num_messages}")
+    print(f"Number of correct Corrections: {num_correct_corrections}/{num_corrections}")
+    print(f"Number of wrong Corrections: {num_wrong_corrections}/{num_corrections}")
+    print(f"Number of bit errors before correction: {num_bits_before_corrections}")
+    print(f"Number of corrected bits: {num_corrected_bits}")
+    print(f"Number of uncorrected bits: {num_uncorrected_bits}")
+
 
 
 class Simulation:
@@ -72,10 +113,16 @@ class Simulation:
             num_wrong_bits_before = diff(random_message, faulty_message)
             error_correction = False
             corrected_message, num_corrections = self.receiver(faulty_message)
-            if corrected_message is not None:
+            if num_corrections > 0:
                 error_correction = True
             num_not_corrected = diff(random_message, corrected_message)
-            results.append((num_wrong_bits_before, error_correction, num_corrections, num_not_corrected))
+            results.append((random_message, encoded_message, faulty_message, corrected_message, num_wrong_bits_before,
+                            error_correction, num_corrections, num_not_corrected))
+            if diff(random_message, corrected_message) == 0:
+                print("Corrected")
+            else:
+                print("Not Corrected")
+            print()
         return results
 
 
@@ -86,3 +133,4 @@ if __name__ == '__main__':
                      Channel(BSC(0.2)),
                      Receiver(block_code))
     results = sim(10)
+    eval(results)
