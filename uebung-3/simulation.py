@@ -1,5 +1,4 @@
-import random
-
+import matplotlib.pyplot as plt
 import numpy as np
 
 from block_codes import BlockCodes
@@ -67,7 +66,7 @@ def eval(results):
     num_uncorrected_bits = 0
     for result in results:
         # 1. number of correct transmissions
-        if diff(result[0], result[2]) == 0:
+        if diff(result[1], result[2]) == 0:
             num_correct_transmissions += 1
         # 2. number of corrected messages
         if result[5]:
@@ -94,6 +93,21 @@ def eval(results):
     print(f"Number of corrected bits: {num_corrected_bits}")
     print(f"Number of uncorrected bits: {num_uncorrected_bits}")
 
+    plt.bar(['flawless messages', 'corrected messages', 'not corrected messages'],
+            [num_correct_transmissions, num_corrections, num_uncorrected])
+    plt.xlabel('messages')
+    plt.show()
+
+    plt.bar(['flawless messages', 'successfully corrected messages', 'wrong corrected messages'],
+            [num_correct_transmissions, num_correct_corrections, num_wrong_corrections])
+    plt.xlabel('messages')
+    plt.xticks(rotation=5)
+    plt.show()
+
+    plt.bar(['bit errors before correction', 'corrected bits', 'bit errors after correction'],
+            [num_bits_before_corrections, num_corrected_bits, num_uncorrected_bits])
+    plt.xlabel('bit errors')
+    plt.show()
 
 
 class Simulation:
@@ -127,10 +141,11 @@ class Simulation:
 
 
 if __name__ == '__main__':
+    # Scenario 1 Hamming-Code
     block_code = BlockCodes([[1, 1, 0], [0, 1, 1], [1, 1, 1], [1, 0, 1]], 1)
     sim = Simulation(Source(4),
                      Sender(block_code),
-                     Channel(BSC(0.2)),
+                     Channel(BSC(0.05)),
                      Receiver(block_code))
-    results = sim(10)
+    results = sim(1000)
     eval(results)
