@@ -161,3 +161,19 @@ if __name__ == '__main__':
                      Receiver(block_code))
     results = sim(1000)
     eval(results)
+
+    # Scenario 3
+    block_code = BlockCodes([[1, 1, 1, 1, 0, 0, 0], [0, 0, 1, 1, 1, 1, 0], [1, 0, 1, 0, 1, 0, 1]], 2)
+    sim = Simulation(Source(3),
+                     Sender(block_code),
+                     Channel(BSC(0.001)),
+                     Receiver(block_code))
+    results = sim(1000)
+    eval(results)
+
+    sim = Simulation(Source(3),
+                     Sender(block_code),
+                     Channel(BSC(0.2)),
+                     Receiver(block_code))
+    results = sim(1000)
+    eval(results)
