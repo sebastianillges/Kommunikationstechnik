@@ -10,20 +10,31 @@ void setup() {
   randomSeed(analogRead(0));  // Seed für den Zufallszahlengenerator
 }
 
-String byteToBits(byte b) {
+String bytesToBits(byte* bytes, int from, int length) {
   String bits = "";
-  for (int i = 7; i >= 0; i--) {
-    bits += (b & (1 << i)) ? '1' : '0';
+  for (int i = from; i < length; i++) {
+    for (int bit = 7; bit >= 0; bit--) {
+      bits += (bytes[i] & (1 << bit) ? "1" : "0");
+    }
+    bits += " "; // Space for readability
   }
   return bits;
 }
 
-String bytesToString(byte* bytes, int length) {
+String bytesToString(byte* bytes, int from, int length) {
   String message = "";
-  for (int i = 0; i < length; i++) {
+  for (int i = from; i < length; i++) {
     message += (char)bytes[i];
   }
   return message;
+}
+
+int bytesToInt(byte* bytes, int from, int length) {
+  int value = 0;
+  for (int i = from; i < length; i++) {
+    value = (value << 8) | bytes[i];
+  }
+  return value;
 }
 
 void introduceBitErrors(byte* message, int length) {
@@ -47,21 +58,36 @@ void printMessageWithBits(byte* message, int length, const char* source, const c
   Serial.print(source);
   Serial.println(":");
 
-  Serial.print("Bits: ");
-  for (int i = 0; i < length; i++) {
-    Serial.print(byteToBits(message[i]));
-    Serial.print(" ");
-  }
-  Serial.println();
+  // Print message as bits
+  Serial.print("  Bits: ");
+  Serial.println(bytesToBits(message, 0, length));
 
-  Serial.print("String: ");
-  Serial.println(bytesToString(message, length));
+  // Print message as string
+  Serial.print("  String: ");
+  Serial.println(bytesToString(message, 0, length));
+
+  // Print first byte as int
+  Serial.print("  Sequence Number: ");
+  Serial.println(message[0]);
+
+  // Print all bytes except the first and the last byte as bits and as string
+  Serial.print("  Payload (Bits): ");
+  Serial.println(bytesToBits(message, 1, length - 1));
+  Serial.print("  Payload (String): ");
+  Serial.println(bytesToString(message, 1, length - 1));
+
+  // Print last byte as int and as bits
+  Serial.print("  CRC (Bits): ");
+  Serial.println(bytesToBits(message, length - 1, length));
+  Serial.print("  CRC (Int): ");
+  Serial.println(message[length - 1]);
 
   Serial.println();
 }
 
 void loop() {
   if (Serial1.available()) {
+    delay(100);  // Warten, um die Nachricht vollständig zu empfangen
     int length = Serial1.available();
     byte message[length];
     Serial1.readBytes(message, length);
@@ -79,6 +105,7 @@ void loop() {
   }
 
   if (Serial2.available()) {
+    delay(100);  // Warten, um die Nachricht vollständig zu empfangen
     int length = Serial2.available();
     byte message[length];
     Serial2.readBytes(message, length);
@@ -94,6 +121,4 @@ void loop() {
     // Weiterleitung der korrumpierten Nachricht an Nano 1
     Serial1.write(message, length);
   }
-
-  delay(1000);
 }
