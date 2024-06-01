@@ -1,4 +1,4 @@
-#define BER 0.01  // Bitfehlerwahrscheinlichkeit
+#define BER 0.001  // Bitfehlerwahrscheinlichkeit (z.B. 0.005 für 0,5%)
 
 void setup() {
   // Initialize both serial ports:
@@ -40,7 +40,7 @@ int bytesToInt(byte* bytes, int from, int length) {
 void introduceBitErrors(byte* message, int length) {
   for (int i = 0; i < length; i++) {
     for (int bit = 0; bit < 8; bit++) {
-      if (random(100) < BER * 100) {  // Zufällige Zahl zwischen 0 und 99, prüfen ob kleiner als BER*100
+      if (random(10000) < BER * 10000) {  // Zufällige Zahl zwischen 0 und 9999, prüfen ob kleiner als BER*10000
         message[i] ^= (1 << bit);  // Bit umkippen
         Serial.print("Bit error introduced at byte ");
         Serial.print(i);

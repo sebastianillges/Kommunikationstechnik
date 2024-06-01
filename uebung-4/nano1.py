@@ -100,25 +100,25 @@ uart = UART(0, 9600)  # UART0: TX (D1), RX (D0)
 led = Pin(6, Pin.OUT)
 sequence_number = 0
 received_ack = False
-timeout = 5
+timeout = 3
 time_start = time.time()
 
 # message = "Hello from Nano 1!"
-message = "test"
-# message = "This document specifies a Hyper Text Coffee Pot Control Protocol\
-#    (HTCPCP), which permits the full request and responses necessary to\
-#    control all devices capable of making the popular caffeinated hot\
-#    beverages.\
-# \
-#    HTTP 1.1 ([RFC2068]) permits the transfer of web objects from origin\
-#    servers to clients. The web is world-wide.  HTCPCP is based on HTTP.\
-#    This is because HTTP is everywhere. It could not be so pervasive\
-#    without being good. Therefore, HTTP is good. If you want good coffee,\
-#    HTCPCP needs to be good. To make HTCPCP good, it is good to base\
-#    HTCPCP on HTTP.\
-# \
-#    Future versions of this protocol may include extensions for espresso\
-#    machines and similar devices."
+# message = "test"
+message = "This document specifies a Hyper Text Coffee Pot Control Protocol\
+   (HTCPCP), which permits the full request and responses necessary to\
+   control all devices capable of making the popular caffeinated hot\
+   beverages.\
+\
+   HTTP 1.1 ([RFC2068]) permits the transfer of web objects from origin\
+   servers to clients. The web is world-wide.  HTCPCP is based on HTTP.\
+   This is because HTTP is everywhere. It could not be so pervasive\
+   without being good. Therefore, HTTP is good. If you want good coffee,\
+   HTCPCP needs to be good. To make HTCPCP good, it is good to base\
+   HTCPCP on HTTP.\
+\
+   Future versions of this protocol may include extensions for espresso\
+   machines and similar devices."
 send_message(message[sequence_number], sequence_number)
 
 while True:
