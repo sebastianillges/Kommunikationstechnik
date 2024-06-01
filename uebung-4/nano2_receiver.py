@@ -60,12 +60,60 @@ def send_ack(seq_num):
     uart.write(bytes_to_send)
     print(f"Sent ACK: {ack_message}, CRC: {crc}")
 
+def evaluate_message(original, modified):
+    extra_repeats = 0
+    wrong_chars = 0
+    total_errors = 0
+
+    original_index = 0
+    modified_index = 0
+
+    while original_index < len(original) and modified_index < len(modified):
+        if original[original_index] == modified[modified_index]:
+            original_index += 1
+            modified_index += 1
+        elif modified_index > 0 and modified[modified_index] == modified[modified_index - 1]:
+            extra_repeats += 1
+            modified_index += 1
+        else:
+            wrong_chars += 1
+            modified_index += 1
+        total_errors = extra_repeats + wrong_chars
+
+    # Remaining characters in modified string are considered wrong characters
+    while modified_index < len(modified):
+        wrong_chars += 1
+        modified_index += 1
+        total_errors = extra_repeats + wrong_chars
+
+    return extra_repeats, wrong_chars, total_errors
+
 uart = UART(0, 9600)  # UART0: TX (D1), RX (D0)
 led = Pin(6, Pin.OUT)
+timeout = 20
+time_start = time.time()
+expected_message = "test"
+# expected_message = "This document specifies a Hyper Text Coffee Pot Control Protocol\
+#    (HTCPCP), which permits the full request and responses necessary to\
+#    control all devices capable of making the popular caffeinated hot\
+#    beverages.\
+# \
+#    HTTP 1.1 ([RFC2068]) permits the transfer of web objects from origin\
+#    servers to clients. The web is world-wide.  HTCPCP is based on HTTP.\
+#    This is because HTTP is everywhere. It could not be so pervasive\
+#    without being good. Therefore, HTTP is good. If you want good coffee,\
+#    HTCPCP needs to be good. To make HTCPCP good, it is good to base\
+#    HTCPCP on HTTP.\
+# \
+#    Future versions of this protocol may include extensions for espresso\
+#    machines and similar devices."
 final_received_message = ""
 
 while True:
     # identify()
+    if time.time() - time_start > timeout:
+        print("Timeout!")
+        break
 
     uart_input = uart.read()  # Lies alle verfügbaren Bytes
     if uart_input:
@@ -97,6 +145,13 @@ while True:
             print("Received valid message:", uart_input)
             final_received_message += received_message
             send_ack(received_sequence_number)
+            time_start = time.time()
         else:
             print(f"CRC error for message {received_sequence_number} {uart_input}! Received: {received_crc_bits} Calculated: {calculated_crc_bits}")
+            time_start = time.time()
         print(final_received_message)
+
+extra_repeats, wrong_chars, total_errors = evaluate_message(expected_message, final_received_message)
+print(f"Anzahl überflüssiger Wiederholungen: {extra_repeats}")
+print(f"Anzahl falscher Zeichen: {wrong_chars}")
+print(f"Anzahl gesamt Fehler: {total_errors}")
