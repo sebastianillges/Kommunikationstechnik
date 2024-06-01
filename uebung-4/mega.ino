@@ -1,4 +1,4 @@
-#define BER 0.05  // Bitfehlerwahrscheinlichkeit
+#define BER 0.01  // Bitfehlerwahrscheinlichkeit
 
 void setup() {
   // Initialize both serial ports:

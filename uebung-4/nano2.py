@@ -21,10 +21,10 @@ def poly_deg(poly):
 def encode_crc(data, poly, num_bits):
     crc = data << (poly_deg(poly))  # Data left-shifted by degree of the polynomial
     for i in range(num_bits):
-        if (crc & (1 << (num_bits + poly_deg(poly) - 1))):
+        if crc & (1 << (num_bits + poly_deg(poly) - 1)):
             crc ^= (poly << (num_bits - 1 - i))
-        else:
-            crc <<= 1
+        crc <<= 1
+    crc >>= 1  # Right shift back to fit the crc to the correct size
     crc = crc & ((1 << poly_deg(poly)) - 1)  # CRC auf die korrekte Länge beschränken
     return crc
 
@@ -52,55 +52,96 @@ def int_to_bits(i, bit_length=8):
     return [int(bit) for bit in binval]
 
 
-uart = UART(0, 9600)  # UART0: TX (D1), RX (D0)
-led = Pin(6, Pin.OUT)
-sequence_number = 0
+def bytes_to_bits(by):
+    received_bits = []
+    for byte in by:
+        binval = bin(byte)[2:]
+        binval = '0' * (8 - len(binval)) + binval  # Manuelles Auffüllen auf 8 Bits
+        received_bits.extend([int(bit) for bit in binval])
+    return received_bits
 
-while True:
-    identify()
 
-    message = "Hi2"
-    # print(f"Sending message: {message}")
+def send_ack(seq_num):
+    ack_message = f"{chr(seq_num)}ACK"
+    ack_bits = string_to_bits(ack_message)
+    ack_int = bits_to_int(ack_bits)
+    ack_bitcount = len(ack_bits)
+    crc = encode_crc(ack_int, CRC5POLY, ack_bitcount)
+    crc_bits = int_to_bits(crc, 8)
+    ack_bits.extend(crc_bits)
+    bytes_to_send = ack_message + chr(crc)
+    uart.write(bytes_to_send)
+    print(f"Sent ACK: {ack_message}, CRC: {crc}")
+
+
+def is_ack(bits):
+    received_ack_bits = bits[8:32]  # 3*8 = 24 bits for "ACK"
+    received_ack = bits_to_string(received_ack_bits)
+    return received_ack == "ACK"
+
+
+def send_message(message, sequence_number):
     message_bits = string_to_bits(str(message))
-    # print(f"Message bits: {message_bits}")
     message_int = bits_to_int(message_bits)
-    # print(f"Message int: {message_int}")
     message_bitcount = len(message_bits)
 
-    # print(f"Sequence number: {sequence_number}")
-    sequence_number_bits = int_to_bits(sequence_number, 8)  # Sicherstellen, dass es 8 Bits sind
-    # print(f"Sequence number bits: {sequence_number_bits}")
-
+    sequence_number_bits = int_to_bits(sequence_number, 8)
     sequence_and_message_bits = sequence_number_bits + message_bits
     sequence_and_message_int = bits_to_int(sequence_and_message_bits)
-    # print(f"Sequence and message bits: {sequence_and_message_bits}")
 
     crc = encode_crc(sequence_and_message_int, CRC5POLY, len(sequence_and_message_bits))
-    # print(f"CRC: {crc}")
-    crc_bits = int_to_bits(crc, 8)  # Sicherstellen, dass CRC in 8 Bits dargestellt wird
-    # print(f"CRC bits: {crc_bits}")
+    crc_bits = int_to_bits(crc, 8)
     sequence_and_message_bits.extend(crc_bits)
-    # print(f"Complete bits to send: {sequence_and_message_bits}")  # Debug-Ausgabe der vollständigen Bits
-    bit_blocks = [sequence_and_message_bits[i:i + 8] for i in range(0, len(sequence_and_message_bits), 8)]
-    # print(f"Complete bits in 8 blocks: {bit_blocks}")  # Debug-Ausgabe der vollständigen Bits
 
     bytes_to_send = chr(sequence_number) + str(message) + chr(crc)
     uart.write(bytes_to_send)
 
-    print(
-        f"Sent message: {message}, Sequence number: {bit_blocks[0]} = {sequence_number}, Message: {bit_blocks[1:-1]} = {message}, CRC: {bit_blocks[-1]} = {crc}")
+    print(f"Sent message: {message}, Sequence number: {sequence_number}, CRC: {crc}")
+    return len(bytes_to_send)
 
-    sequence_number = (sequence_number + 1) % 256
 
-    uart_input = uart.read(len(bytes_to_send))  # Anzahl der erwarteten Bytes lesen
+def receive_ack():
+    uart_inp = uart.read()  # Anzahl der erwarteten Bytes für ACK
+    if uart_inp:
+        rec_bits = bytes_to_bits(uart_inp)
+        if is_ack(received_bits):
+            rec_sequence_number_bits = rec_bits[:8]
+            rec_sequence_number = bits_to_int(rec_sequence_number_bits)
+            return rec_sequence_number
+    return None
+
+
+uart = UART(0, 9600)  # UART0: TX (D1), RX (D0)
+led = Pin(6, Pin.OUT)
+sequence_number = 0
+received_ack = False
+timeout = 5
+time_start = time.time()
+
+message = "Hello from Nano 2!"
+send_message(message[sequence_number], sequence_number)
+
+while True:
+    # identify()
+
+    if sequence_number == len(message) - 1:
+        break
+
+    if received_ack:
+        time_start = time.time()
+        sequence_number = (sequence_number + 1) % 256
+        send_message(message[sequence_number], sequence_number)
+        received_ack = False
+    else:
+        if time.time() - time_start > timeout:
+            print("Timeout! Resending message.")
+            send_message(message[sequence_number], sequence_number)
+            time_start = time.time()
+
+    uart_input = uart.read()  # Anzahl der erwarteten Bytes lesen
     if uart_input:
-        uart_message = uart_input
-        print(f"Received bytes: {list(uart_message)}")  # Debug-Ausgabe der empfangenen Bytes
-        received_bits = []
-        for byte in uart_message:
-            binval = bin(byte)[2:]
-            binval = '0' * (8 - len(binval)) + binval  # Manuelles Auffüllen auf 8 Bits
-            received_bits.extend([int(bit) for bit in binval])
+        print(f"Received bytes: {list(uart_input)}")  # Debug-Ausgabe der empfangenen Bytes
+        received_bits = bytes_to_bits(uart_input)
 
         received_sequence_number_bits = received_bits[:8]
         received_sequence_number = bits_to_int(received_sequence_number_bits)
@@ -108,27 +149,30 @@ while True:
         received_message_bits = received_bits[8:-8]
         received_message = bits_to_string(received_message_bits)
 
+        message_str = bits_to_string(received_message_bits)
+
         received_crc_bits = received_bits[-8:]
         received_crc = bits_to_int(received_crc_bits)
 
         crc_validation_data = bits_to_int(received_sequence_number_bits + received_message_bits)
         crc_validation_data_len = len(received_sequence_number_bits) + len(received_message_bits)
 
-        received_bit_blocks = bit_blocks = [received_bits[i:i + 8] for i in range(0, len(received_bits), 8)]
+        received_bit_blocks = [received_bits[i:i + 8] for i in range(0, len(received_bits), 8)]
 
         calculated_crc = encode_crc(crc_validation_data, CRC5POLY, crc_validation_data_len)
         calculated_crc_bits = int_to_bits(calculated_crc, 8)
 
-        # message_str = ''.join(chr(bits_to_int(received_message_bits[i:i + 8])) for i in range(0, len(received_message_bits), 8))
-
         print(
-            f"Received Message: {uart_message}, Sequence Number:  {received_bit_blocks[0]} = {bits_to_int(received_bit_blocks[0])}, Message: {received_bit_blocks[1:-1]} = {message_str}, CRC: {received_bit_blocks[-1]} = {received_crc}")
+            f"Received Message: {uart_input}, Sequence Number: {received_sequence_number}, Message: {message_str}, CRC: {received_crc}")
         print(f"Received CRC: {received_crc}")
         print(f"Calculated CRC: {calculated_crc}")
         if received_crc_bits == calculated_crc_bits:
-            print("Received valid message:", uart_message)
+            if message_str == "ACK":
+                if received_sequence_number == sequence_number:
+                    received_ack = True
+                    print("Received valid ACK:", uart_input)
+            else:
+                print("Received valid message:", uart_input)
         else:
             print(
-                f"CRC error for message {received_sequence_number} {uart_message}! Received: {received_crc_bits} Calculated:  {calculated_crc_bits}")
-
-    time.sleep(5)
+                f"CRC error for message {received_sequence_number} {uart_input}! Received: {received_crc_bits} Calculated: {calculated_crc_bits}")
