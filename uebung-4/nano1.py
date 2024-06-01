@@ -49,14 +49,14 @@ def bytes_to_bits(by):
     return received_bits
 
 def send_ack(seq_num):
-    ack_message = f"{chr(seq_num)}ACK"
-    ack_bits = string_to_bits(ack_message)
+    ack_message = bytearray([seq_num]) + b'ACK'
+    ack_bits = string_to_bits(ack_message.decode('latin-1'))  # Use 'latin-1' to decode bytearray
     ack_int = bits_to_int(ack_bits)
     ack_bitcount = len(ack_bits)
     crc = encode_crc(ack_int, CRC5POLY, ack_bitcount)
     crc_bits = int_to_bits(crc, 8)
     ack_bits.extend(crc_bits)
-    bytes_to_send = ack_message + chr(crc)
+    bytes_to_send = ack_message + bytearray([crc])
     uart.write(bytes_to_send)
     print(f"Sent ACK: {ack_message}, CRC: {crc}")
 
@@ -72,7 +72,7 @@ def send_message(message, sequence_number):
     message_int = bits_to_int(message_bits)
     message_bitcount = len(message_bits)
 
-    sequence_number_bits = int_to_bits(sequence_number, 8)
+    sequence_number_bits = int_to_bits(sequence_number, 8)  # 1 Byte für die Sequenznummer
     sequence_and_message_bits = sequence_number_bits + message_bits
     sequence_and_message_int = bits_to_int(sequence_and_message_bits)
 
@@ -80,14 +80,14 @@ def send_message(message, sequence_number):
     crc_bits = int_to_bits(crc, 8)
     sequence_and_message_bits.extend(crc_bits)
 
-    bytes_to_send = chr(sequence_number) + str(message) + chr(crc)
+    bytes_to_send = bytearray([sequence_number]) + message.encode('ascii') + bytearray([crc])
     uart.write(bytes_to_send)
 
     print(f"Sent message: {message}, Sequence number: {sequence_number}, CRC: {crc}")
     return len(bytes_to_send)
 
 def receive_ack():
-    uart_inp = uart.read(4)  # Anzahl der erwarteten Bytes für ACK
+    uart_inp = uart.read(5)  # Anzahl der erwarteten Bytes für ACK (1 Byte für SeqNum, 3 Bytes für 'ACK', 1 Byte für CRC)
     if uart_inp:
         rec_bits = bytes_to_bits(uart_inp)
         if is_ack(rec_bits):
@@ -99,44 +99,38 @@ def receive_ack():
 uart = UART(0, 9600)  # UART0: TX (D1), RX (D0)
 led = Pin(6, Pin.OUT)
 sequence_number = 0
+message_position = 0
 received_ack = False
 timeout = 3
 time_start = time.time()
 
-# message = "Hello from Nano 1!"
-# message = "test"
 message = "This document specifies a Hyper Text Coffee Pot Control Protocol\
    (HTCPCP), which permits the full request and responses necessary to\
    control all devices capable of making the popular caffeinated hot\
    beverages.\
 \
    HTTP 1.1 ([RFC2068]) permits the transfer of web objects from origin\
-   servers to clients. The web is world-wide.  HTCPCP is based on HTTP.\
-   This is because HTTP is everywhere. It could not be so pervasive\
-   without being good. Therefore, HTTP is good. If you want good coffee,\
-   HTCPCP needs to be good. To make HTCPCP good, it is good to base\
-   HTCPCP on HTTP.\
-\
-   Future versions of this protocol may include extensions for espresso\
-   machines and similar devices."
-send_message(message[sequence_number], sequence_number)
+   servers to clients."
+
+send_message(message[message_position], sequence_number)
 
 while True:
-    # identify()
+    identify()
 
-    if sequence_number == len(message):
+    if message_position == len(message):
         break
 
     if received_ack:
         time_start = time.time()
-        sequence_number += 1
-        if sequence_number < len(message):
-            send_message(message[sequence_number], sequence_number)
+        sequence_number = (sequence_number + 1) % 128  # Beschränke die Sequenznummer auf 7 Bits (0-127)
+        message_position += 1
+        if message_position < len(message):
+            send_message(message[message_position], sequence_number)
         received_ack = False
     else:
         if time.time() - time_start > timeout:
             print("Timeout! Resending message.")
-            send_message(message[sequence_number], sequence_number)
+            send_message(message[message_position], sequence_number)
             time_start = time.time()
 
     uart_input = uart.read()  # Anzahl der erwarteten Bytes lesen
