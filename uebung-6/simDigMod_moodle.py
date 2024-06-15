@@ -6,12 +6,15 @@ import scipy as sp
 from math import pi
 import matplotlib.pyplot as plt
 
+
 def gen_bit_vector(k):
     return vector(choices([0, 1], k=k))
+
 
 def pulse_shaping(pulse, symV, nsamp):
     filt = TransmitFilter(pulse, nsamp)
     return filt(symV) / nsamp
+
 
 def amplitude_modulation(s, fc, fs):
     t = vector(range(0, len(s)))
@@ -19,11 +22,13 @@ def amplitude_modulation(s, fc, fs):
     sin_carrier = np.sin(2 * pi * fc / fs * t)
     return np.real(s) * cos_carrier + np.imag(s) * sin_carrier
 
+
 def amplitude_demodulation(s, fc, fs):
     t = vector(range(0, len(s)))
     cos_carrier = np.cos(2 * pi * fc / fs * t)
     sin_carrier = np.sin(2 * pi * fc / fs * t)
     return s * cos_carrier + 1j * s * sin_carrier
+
 
 def lowpass(s, fs, fg):
     n = len(s)
@@ -33,8 +38,10 @@ def lowpass(s, fs, fg):
     s_fft[zeroI] = 0
     return np.fft.ifft(s_fft)
 
+
 def integrate_and_dump(s, nsamp):
     return [sum(s[i:i + nsamp]) for i in range(0, len(s), nsamp)]
+
 
 def main():
     # parameter
@@ -62,7 +69,7 @@ def main():
     pulse = RectangularPulse()
 
     # channel
-    SNRdB = 20  # SNR in decibel
+    SNRdB = 50  # SNR in decibel
     SNR = 10 ** (SNRdB / 10)  # linear SNR
     awgn_sym = AWGNChannel(SNR, 1)  # AWGN channel for simulation on symbol level
     awgn_bb = AWGNChannel(SNR, 1 / nsamp)  # AWGN channel for simulation on baseband signal level
@@ -101,11 +108,6 @@ def main():
 
     # plot results
     if doPlot:
-        # Original bits
-        plt.figure()
-        plt.stem(bitV)
-        plt.title("Original Bits")
-
         # Constellation diagram
         plt.figure()
         plt.scatter(np.real(symV), np.imag(symV), label='Original Symbols', alpha=0.5)
@@ -139,5 +141,127 @@ def main():
 
         plt.show()
 
+
+def run_simulation_study():
+    def simulate_modulation(k, fc, fs, nsamp, SNRdB, modulation_order):
+        # Set the seed for reproducibility
+        seed(2)
+        np.random.seed(randint(0, 10000))
+
+        # Ensure k is a multiple of modulation_order
+        bits_per_symbol = int(np.log2(modulation_order))
+        if k % bits_per_symbol != 0:
+            k += bits_per_symbol - (k % bits_per_symbol)
+
+        # Generate random bits
+        bitV = gen_bit_vector(k)
+
+        # Define modulation scheme
+        mod_scheme = PSKModulation(modulation_order)
+
+        # Modulate the bits
+        symV = mod_scheme.modulate(bitV)
+
+        # Pulse shaping
+        pulse = RectangularPulse()
+        inphase_signal = pulse_shaping(pulse, np.real(symV), nsamp)
+        quadrature_signal = pulse_shaping(pulse, np.imag(symV), nsamp)
+        bb_signal = inphase_signal + 1j * quadrature_signal
+
+        # Amplitude modulation
+        fb_signal = amplitude_modulation(bb_signal, fc, fs)
+
+        # AWGN channel
+        SNR = 10 ** (SNRdB / 10)
+        awgn_fb = AWGNChannel(SNR, 0.5 / nsamp)
+        noisy_fb_signal = awgn_fb(fb_signal)
+
+        # Amplitude demodulation
+        noisy_bbx_signal = amplitude_demodulation(noisy_fb_signal, fc, fs)
+        noisy_bb_signal = lowpass(noisy_bbx_signal, fs, fc) * 2
+
+        # Recover symbols
+        noisy_symV = integrate_and_dump(noisy_bb_signal, nsamp)
+
+        # Demodulate symbols
+        noisy_bitV = mod_scheme.demodulate(noisy_symV)
+
+        # Calculate bit error rate
+        ber = np.sum(bitV != noisy_bitV) / len(bitV)
+
+        return bitV, symV, noisy_symV, noisy_bitV, ber
+
+    # Parameters
+    fc = 4  # carrier frequency
+    fs = 64  # sampling rate
+    nsamp = 32  # samples per symbol
+    modulation_order = 4  # QPSK
+
+    # Study with varying SNR values
+    snr_values = range(10, 60, 10)
+    ber_values = []
+
+    # Perform simulation with high SNR and few symbols
+    k_values = [200, 400]
+    for snr in snr_values:
+        for k in k_values:
+            bitV, symV, noisy_symV, noisy_bitV, ber = simulate_modulation(k, fc, fs, nsamp, snr, modulation_order)
+            print(f'Bit Error Rate for k={k}, SNRdB={snr}: {ber}')
+            print('Original bits:', bitV)
+            print('Recovered bits:', noisy_bitV)
+
+            # Plot constellation diagrams
+            plt.figure()
+            plt.scatter(np.real(symV), np.imag(symV), label='Original Symbols', alpha=0.5)
+            plt.scatter(np.real(noisy_symV), np.imag(noisy_symV), label='Recovered Symbols', alpha=0.5)
+            plt.title(f"Constellation Diagram (k={k}, SNR={snr}dB)")
+            plt.xlabel("In-phase")
+            plt.ylabel("Quadrature")
+            plt.tight_layout()
+            plt.legend()
+            plt.grid(True)
+            plt.show()
+
+    k = 1000  # increase number of bits for this study
+    for SNRdB in snr_values:
+        _, _, _, _, ber = simulate_modulation(k, fc, fs, nsamp, SNRdB, modulation_order)
+        ber_values.append(ber)
+
+    # Plot BER vs SNR
+    plt.figure()
+    # plt.semilogy(snr_values, ber_values, 'o-')
+    plt.plot(snr_values, ber_values, 'o-')
+    plt.title("BER vs SNR for QPSK")
+    plt.xlabel("SNR (dB)")
+    plt.ylabel("Bit Error Rate (BER)")
+    plt.tight_layout()
+    plt.grid(True)
+    plt.show()
+
+    # Study with different modulation schemes
+    modulation_orders = [2, 4, 16, 64]
+    ber_modulation = {}
+
+    for mod_order in modulation_orders:
+        ber_values = []
+        for SNRdB in snr_values:
+            _, _, _, _, ber = simulate_modulation(k, fc, fs, nsamp, SNRdB, mod_order)
+            ber_values.append(ber)
+        ber_modulation[mod_order] = ber_values
+
+    # Plot BER vs SNR for different modulation schemes
+    plt.figure()
+    for mod_order in modulation_orders:
+        plt.semilogy(snr_values, ber_modulation[mod_order], label=f'{mod_order}-QAM')
+    plt.title("BER vs SNR for different modulation schemes")
+    plt.xlabel("SNR (dB)")
+    plt.ylabel("Bit Error Rate (BER)")
+    plt.tight_layout()
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
 if __name__ == '__main__':
     main()
+    run_simulation_study()
