@@ -202,7 +202,8 @@ def run_simulation_study():
     ber_values = []
 
     # Perform simulation with high SNR and few symbols
-    k_values = [200, 400]
+    # k_values = [200, 400]
+    k_values = [200]
     for snr in snr_values:
         for k in k_values:
             bitV, symV, noisy_symV, noisy_bitV, ber = simulate_modulation(k, fc, fs, nsamp, snr, modulation_order)
@@ -222,7 +223,7 @@ def run_simulation_study():
             plt.grid(True)
             plt.show()
 
-    k = 1000  # increase number of bits for this study
+    k = 10000
     for SNRdB in snr_values:
         _, _, _, _, ber = simulate_modulation(k, fc, fs, nsamp, SNRdB, modulation_order)
         ber_values.append(ber)
