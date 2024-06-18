@@ -1,6 +1,6 @@
 from numpy import array as vector
 from random import choices, seed, randint
-from komm import PSKModulation, RectangularPulse, TransmitFilter, AWGNChannel
+from komm import PSKModulation, RectangularPulse, TransmitFilter, AWGNChannel, QAModulation
 import numpy as np
 import scipy as sp
 from math import pi
@@ -157,7 +157,10 @@ def run_simulation_study():
         bitV = gen_bit_vector(k)
 
         # Define modulation scheme
-        mod_scheme = PSKModulation(modulation_order)
+        if modulation_order <= 4:
+            mod_scheme = PSKModulation(modulation_order)
+        else:
+            mod_scheme = QAModulation(modulation_order)
 
         # Modulate the bits
         symV = mod_scheme.modulate(bitV)
@@ -198,7 +201,7 @@ def run_simulation_study():
     modulation_order = 4  # QPSK
 
     # Study with varying SNR values
-    snr_values = range(10, 60, 10)
+    snr_values = range(5, 30, 2)
     ber_values = []
 
     # Perform simulation with high SNR and few symbols
@@ -253,7 +256,8 @@ def run_simulation_study():
     # Plot BER vs SNR for different modulation schemes
     plt.figure()
     for mod_order in modulation_orders:
-        plt.semilogy(snr_values, ber_modulation[mod_order], label=f'{mod_order}-QAM')
+        # plt.semilogy(snr_values, ber_modulation[mod_order], label=f'{mod_order}-QAM')
+        plt.plot(snr_values, ber_modulation[mod_order], label=f'{mod_order}-QAM', marker='o')
     plt.title("BER vs SNR for different modulation schemes")
     plt.xlabel("SNR (dB)")
     plt.ylabel("Bit Error Rate (BER)")
