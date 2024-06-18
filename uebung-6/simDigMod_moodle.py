@@ -201,7 +201,7 @@ def run_simulation_study():
     modulation_order = 4  # QPSK
 
     # Study with varying SNR values
-    snr_values = range(5, 30, 2)
+    snr_values = range(5, 30, 5)
     ber_values = []
 
     # Perform simulation with high SNR and few symbols
@@ -226,6 +226,7 @@ def run_simulation_study():
             plt.grid(True)
             plt.show()
 
+    snr_values = range(5, 30, 2)
     k = 10000
     for SNRdB in snr_values:
         _, _, _, _, ber = simulate_modulation(k, fc, fs, nsamp, SNRdB, modulation_order)
@@ -256,7 +257,7 @@ def run_simulation_study():
     # Plot BER vs SNR for different modulation schemes
     plt.figure()
     for mod_order in modulation_orders:
-        # plt.semilogy(snr_values, ber_modulation[mod_order], label=f'{mod_order}-QAM')
+        # plt.semilogy(snr_values, ber_modulation[mod_order], label=f'{mod_order}-QAM', marker='o')
         plt.plot(snr_values, ber_modulation[mod_order], label=f'{mod_order}-QAM', marker='o')
     plt.title("BER vs SNR for different modulation schemes")
     plt.xlabel("SNR (dB)")
