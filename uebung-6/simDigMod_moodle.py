@@ -160,7 +160,7 @@ def run_simulation_study():
         if modulation_order <= 4:
             mod_scheme = PSKModulation(modulation_order)
         else:
-            mod_scheme = QAModulation(modulation_order)
+            mod_scheme = QAModulation(modulation_order, base_amplitudes=1/(np.sqrt(modulation_order) -1))
 
         # Modulate the bits
         symV = mod_scheme.modulate(bitV)
@@ -192,6 +192,10 @@ def run_simulation_study():
         # Calculate bit error rate
         ber = np.sum(bitV != noisy_bitV) / len(bitV)
 
+        # normalize symV and noisy_symV
+        #symV = symV / np.sqrt(np.mean(np.abs(symV) ** 2))
+        #noisy_symV = noisy_symV / np.sqrt(np.mean(np.abs(noisy_symV) ** 2))
+
         return bitV, symV, noisy_symV, noisy_bitV, ber
 
     # Parameters
@@ -206,10 +210,10 @@ def run_simulation_study():
 
     # Perform simulation with high SNR and few symbols
     # k_values = [200, 400]
-    k_values = [200]
+    k_values = [10000]
     for snr in snr_values:
         for k in k_values:
-            bitV, symV, noisy_symV, noisy_bitV, ber = simulate_modulation(k, fc, fs, nsamp, snr, modulation_order)
+            bitV, symV, noisy_symV, noisy_bitV, ber = simulate_modulation(k, fc, fs, nsamp, snr, 64)
             print(f'Bit Error Rate for k={k}, SNRdB={snr}: {ber}')
             print('Original bits:', bitV)
             print('Recovered bits:', noisy_bitV)
@@ -226,7 +230,7 @@ def run_simulation_study():
             plt.grid(True)
             plt.show()
 
-    snr_values = range(5, 30, 2)
+    snr_values = range(5, 50, 2)
     k = 10000
     for SNRdB in snr_values:
         _, _, _, _, ber = simulate_modulation(k, fc, fs, nsamp, SNRdB, modulation_order)
@@ -257,8 +261,8 @@ def run_simulation_study():
     # Plot BER vs SNR for different modulation schemes
     plt.figure()
     for mod_order in modulation_orders:
-        # plt.semilogy(snr_values, ber_modulation[mod_order], label=f'{mod_order}-QAM', marker='o')
-        plt.plot(snr_values, ber_modulation[mod_order], label=f'{mod_order}-QAM', marker='o')
+        plt.semilogy(snr_values, ber_modulation[mod_order], label=f'{mod_order}-QAM', marker='o')
+        #plt.plot(snr_values, ber_modulation[mod_order], label=f'{mod_order}-QAM', marker='o')
     plt.title("BER vs SNR for different modulation schemes")
     plt.xlabel("SNR (dB)")
     plt.ylabel("Bit Error Rate (BER)")
